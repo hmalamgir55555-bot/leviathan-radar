@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LEVIATHAN // Wi-Fi & RF Presence Radar</title>
+    <title>LEVIATHAN v2.0 // Overlord Tactical Sentinel</title>
     <style>
         :root {
             --bg: #030706;
             --panel: #08120e;
             --radar-green: #00ff88;
-            --radar-dim: rgba(0, 255, 136, 0.15);
             --warn: #f59e0b;
             --danger: #ff2a55;
             --cyan: #00e5ff;
+            --purple: #b388ff;
             --text: #e2f8ee;
             --muted: #6b9080;
             --border: #122b22;
@@ -20,19 +20,19 @@
         * { box-sizing: border-box; font-family: 'Courier New', Courier, monospace; }
         body {
             margin: 0; padding: 0; background: var(--bg); color: var(--text);
-            padding-bottom: 35px; overflow-x: hidden;
+            padding-bottom: 40px; overflow-x: hidden;
         }
 
         header {
-            background: var(--panel); padding: 12px 14px;
+            background: var(--panel); padding: 11px 14px;
             border-bottom: 1px solid var(--border);
             display: flex; justify-content: space-between; align-items: center;
             position: sticky; top: 0; z-index: 50;
         }
-        .brand { font-size: 1rem; font-weight: bold; color: var(--radar-green); letter-spacing: 1px; }
-        .sub-brand { font-size: 0.68rem; color: var(--muted); }
+        .brand { font-size: 0.96rem; font-weight: bold; color: var(--radar-green); letter-spacing: 0.8px; }
+        .sub-brand { font-size: 0.65rem; color: var(--muted); }
         .sys-badge {
-            font-size: 0.7rem; padding: 4px 8px; border-radius: 4px;
+            font-size: 0.68rem; padding: 4px 7px; border-radius: 4px;
             border: 1px solid var(--radar-green); color: var(--radar-green);
             background: rgba(0, 255, 136, 0.08);
         }
@@ -45,9 +45,7 @@
             border-radius: 8px; padding: 10px; text-align: center;
             margin-bottom: 12px; transition: 0.25s;
         }
-        .threat-banner.warn {
-            border-color: var(--warn); background: rgba(245, 158, 11, 0.12);
-        }
+        .threat-banner.warn { border-color: var(--warn); background: rgba(245, 158, 11, 0.12); }
         .threat-banner.breach {
             border-color: var(--danger); background: rgba(255, 42, 85, 0.22);
             box-shadow: 0 0 22px rgba(255, 42, 85, 0.45);
@@ -55,15 +53,15 @@
         }
         @keyframes pulseAlert { from { opacity: 0.85; } to { opacity: 1; } }
 
-        .threat-title { font-size: 0.95rem; font-weight: bold; color: var(--radar-green); }
+        .threat-title { font-size: 0.92rem; font-weight: bold; color: var(--radar-green); }
         .warn .threat-title { color: var(--warn); }
         .breach .threat-title { color: var(--danger); }
-        .threat-sub { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+        .threat-sub { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
 
         /* Radar Canvas Box */
         .radar-wrapper {
             position: relative; width: 100%; aspect-ratio: 1 / 1;
-            max-width: 340px; margin: 0 auto 12px;
+            max-width: 310px; margin: 0 auto 12px;
             background: radial-gradient(circle, #061811 0%, #020504 75%);
             border-radius: 50%; border: 2px solid #16382b;
             box-shadow: 0 0 25px rgba(0, 255, 136, 0.12), inset 0 0 30px rgba(0, 255, 136, 0.08);
@@ -73,27 +71,27 @@
 
         /* Telemetry Metrics */
         .metrics-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
             margin-bottom: 12px;
         }
         .metric-box {
             background: var(--panel); border: 1px solid var(--border);
-            border-radius: 8px; padding: 9px 6px; text-align: center;
+            border-radius: 8px; padding: 8px 4px; text-align: center;
         }
-        .metric-label { font-size: 0.66rem; color: var(--muted); display: block; }
-        .metric-val { font-size: 0.95rem; font-weight: bold; color: var(--radar-green); margin-top: 3px; display: block; }
+        .metric-label { font-size: 0.6rem; color: var(--muted); display: block; }
+        .metric-val { font-size: 0.85rem; font-weight: bold; color: var(--radar-green); margin-top: 3px; display: block; }
 
         /* Waveform Box */
         .wave-card {
             background: var(--panel); border: 1px solid var(--border);
-            border-radius: 8px; padding: 10px; margin-bottom: 12px;
+            border-radius: 8px; padding: 9px; margin-bottom: 12px;
         }
         .wave-header {
-            display: flex; justify-content: space-between; font-size: 0.72rem;
-            color: var(--muted); margin-bottom: 6px;
+            display: flex; justify-content: space-between; font-size: 0.68rem;
+            color: var(--muted); margin-bottom: 5px;
         }
         canvas#waveCanvas {
-            width: 100%; height: 68px; background: #020504;
+            width: 100%; height: 60px; background: #020504;
             border: 1px solid #0e241c; border-radius: 4px; display: block;
         }
 
@@ -104,55 +102,117 @@
         }
         .btn-row { display: flex; gap: 8px; margin-bottom: 8px; }
         .btn {
-            flex: 1; padding: 11px 6px; border-radius: 6px; font-size: 0.8rem;
+            flex: 1; padding: 11px 6px; border-radius: 6px; font-size: 0.78rem;
             font-weight: bold; cursor: pointer; border: 1px solid var(--radar-green);
             background: rgba(0, 255, 136, 0.14); color: var(--radar-green);
             transition: 0.2s;
         }
         .btn:active { transform: scale(0.97); }
-        .btn.active-scan {
-            background: var(--danger); border-color: var(--danger); color: #fff;
-        }
-        .btn-cal {
-            border-color: var(--warn); background: rgba(245, 158, 11, 0.12); color: var(--warn);
-        }
-        .btn-test {
-            border-color: var(--cyan); background: rgba(0, 229, 255, 0.12); color: var(--cyan);
-            width: 100%; margin-bottom: 10px;
-        }
+        .btn.active-scan { background: var(--danger); border-color: var(--danger); color: #fff; }
+        .btn-cal { border-color: var(--warn); background: rgba(245, 158, 11, 0.12); color: var(--warn); }
+        .btn-test { border-color: var(--cyan); background: rgba(0, 229, 255, 0.12); color: var(--cyan); }
+        .btn-ghost { border-color: var(--purple); background: rgba(179, 136, 255, 0.14); color: var(--purple); }
 
-        .slider-row { margin-bottom: 10px; }
+        .slider-row { margin: 10px 0; }
         .slider-row label {
-            display: flex; justify-content: space-between; font-size: 0.76rem;
+            display: flex; justify-content: space-between; font-size: 0.74rem;
             color: var(--text); margin-bottom: 4px;
         }
         input[type="range"] { width: 100%; accent-color: var(--radar-green); }
 
         .toggle-item {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 7px 0; border-top: 1px solid #0e241c; font-size: 0.76rem;
+            padding: 7px 0; border-top: 1px solid #0e241c; font-size: 0.74rem;
         }
-        .toggle-item input { width: 16px; height: 16px; accent-color: var(--radar-green); }
+        .toggle-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--radar-green); }
+        select.mini-select {
+            background: #030706; color: var(--radar-green); border: 1px solid var(--border);
+            padding: 3px 6px; border-radius: 4px; font-size: 0.7rem;
+        }
+
+        /* Evidence Vault */
+        .vault-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px; margin-bottom: 12px;
+        }
+        .vault-title {
+            font-size: 0.8rem; font-weight: bold; color: var(--cyan);
+            margin-bottom: 8px; display: flex; justify-content: space-between;
+        }
+        .evidence-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+        }
+        .ev-item {
+            background: #020504; border: 1px solid #16382b; border-radius: 6px;
+            padding: 6px; font-size: 0.68rem; text-align: center;
+        }
+        .ev-item img { width: 100%; border-radius: 4px; margin-bottom: 4px; border: 1px solid var(--danger); }
+        .ev-item audio { width: 100%; height: 28px; margin: 4px 0; }
+        .ev-dl {
+            display: inline-block; margin-top: 3px; padding: 3px 8px;
+            background: rgba(0, 255, 136, 0.15); color: var(--radar-green);
+            text-decoration: none; border-radius: 4px; border: 1px solid var(--radar-green);
+        }
 
         /* Terminal Log */
         .log-box {
             background: #020504; border: 1px solid var(--border);
-            border-radius: 8px; padding: 9px; height: 115px;
-            overflow-y: auto; font-size: 0.71rem; line-height: 1.45;
+            border-radius: 8px; padding: 9px; height: 110px;
+            overflow-y: auto; font-size: 0.69rem; line-height: 1.45;
         }
         .log-line { margin-bottom: 3px; color: var(--muted); }
         .log-line.alert { color: var(--danger); font-weight: bold; }
         .log-line.ok { color: var(--radar-green); }
+
+        /* Hidden Camera Elements */
+        #hiddenVideo, #hiddenCanvas { display: none; }
+
+        /* Ghost Camouflage Overlay (Fake Calculator & Stealth Blackout) */
+        #ghostOverlay {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: #121212; color: #fff; flex-direction: column;
+            justify-content: space-between; padding: 18px;
+            font-family: Arial, sans-serif;
+        }
+        .calc-top-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.75rem; color: #777;
+        }
+        .stealth-btn {
+            background: #222; color: #aaa; border: 1px solid #333;
+            padding: 5px 10px; border-radius: 5px; font-size: 0.72rem;
+        }
+        .calc-display {
+            background: #1c1c1c; padding: 20px 15px; border-radius: 10px;
+            text-align: right; font-size: 2.3rem; font-weight: bold;
+            margin: 15px 0; overflow: hidden; letter-spacing: 1px;
+        }
+        .calc-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+            flex: 1; max-height: 420px;
+        }
+        .c-btn {
+            background: #262626; border: none; border-radius: 12px;
+            color: #fff; font-size: 1.4rem; font-weight: bold; cursor: pointer;
+        }
+        .c-btn:active { background: #3a3a3a; }
+        .c-op { background: #ff9500; color: #fff; }
+        .c-fn { background: #3b3b3b; color: #00e5ff; }
+
+        #pureBlackCover {
+            display: none; position: fixed; inset: 0; z-index: 10000;
+            background: #000000;
+        }
     </style>
 </head>
 <body>
 
 <header>
     <div>
-        <div class="brand">👁️ LEVIATHAN // RF-RADAR</div>
-        <div class="sub-brand">Wi-Fi Jitter & Wall-Motion Sentinel</div>
+        <div class="brand">👁️ LEVIATHAN v2.0 // OVERLORD</div>
+        <div class="sub-brand">RF + Doppler + Seismic + Optical Sentinel</div>
     </div>
-    <div class="sys-badge" id="connTypeBadge">NET: CHECKING</div>
+    <div class="sys-badge" id="connTypeBadge">NET: ACTIVE</div>
 </header>
 
 <div class="container">
@@ -165,21 +225,25 @@
 
     <!-- Circular Tactical Radar -->
     <div class="radar-wrapper">
-        <canvas id="radarCanvas" width="340" height="340"></canvas>
+        <canvas id="radarCanvas" width="310" height="310"></canvas>
     </div>
 
-    <!-- Live Metrics -->
+    <!-- 4-Way Live Telemetry Metrics -->
     <div class="metrics-grid">
         <div class="metric-box">
-            <span class="metric-label">RF PING (RTT)</span>
+            <span class="metric-label">RF PING</span>
             <span class="metric-val" id="rttVal">-- ms</span>
         </div>
         <div class="metric-box">
-            <span class="metric-label">SIGNAL JITTER</span>
+            <span class="metric-label">RF JITTER</span>
             <span class="metric-val" id="jitterVal">0.0 ms</span>
         </div>
         <div class="metric-box">
-            <span class="metric-label">MOTION INDEX</span>
+            <span class="metric-label">SEISMIC G</span>
+            <span class="metric-val" id="seismicVal">0.00</span>
+        </div>
+        <div class="metric-box">
+            <span class="metric-label">THREAT %</span>
             <span class="metric-val" id="motionScore">0%</span>
         </div>
     </div>
@@ -187,59 +251,138 @@
     <!-- RF Perturbation Oscilloscope -->
     <div class="wave-card">
         <div class="wave-header">
-            <span>📡 RF MULTIPATH DISTURBANCE WAVE</span>
+            <span>📡 MULTI-SENSOR THREAT WAVEFORM</span>
             <span id="baselineLabel">BASELINE: UNLOCKED</span>
         </div>
-        <canvas id="waveCanvas" width="480" height="68"></canvas>
+        <canvas id="waveCanvas" width="480" height="60"></canvas>
     </div>
 
     <!-- Tactical Controls -->
     <div class="ctrl-card">
         <div class="btn-row">
             <button class="btn" id="scanBtn" onclick="toggleRadar()">▶ রাডার চালু করুন</button>
-            <button class="btn btn-cal" id="calBtn" onclick="calibrateBaseline()">🎯 রুম ক্যালিব্রেট</button>
+            <button class="btn btn-cal" id="calBtn" onclick="calibrateBaseline()">🎯 ক্যালিব্রেট</button>
         </div>
-        <button class="btn btn-test" onclick="testSirenSound()">🔊 সাউন্ড টেস্ট (স্পিকার ও সাইরেন পরীক্ষা)</button>
+        <div class="btn-row">
+            <button class="btn btn-test" onclick="testSirenSound()">🔊 সাইরেন ও ভয়েস টেস্ট</button>
+            <button class="btn btn-ghost" onclick="activateGhostMode()">🕵️ ঘোস্ট ক্যামোফ্লেজ</button>
+        </div>
 
         <div class="slider-row">
             <label>
                 <span>সেন্সিটিভিটি (সংবেদনশীলতা):</span>
-                <span id="sensLabel" style="color:var(--radar-green);">উচ্চ (75%)</span>
+                <span id="sensLabel" style="color:var(--radar-green);">উচ্চ (78%)</span>
             </label>
-            <input type="range" id="sensSlider" min="20" max="95" value="75" oninput="updateSensLabel()">
+            <input type="range" id="sensSlider" min="20" max="95" value="78" oninput="updateSensLabel()">
         </div>
 
         <div class="toggle-item">
-            <label for="sonarToggle">🦇 Acoustic Sonar Boost (19.5kHz ডপলার সেন্সর)</label>
+            <label for="sonarToggle">🦇 Acoustic Sonar Boost (19.5kHz ডপলার)</label>
             <input type="checkbox" id="sonarToggle" onchange="toggleAcousticSonar()">
         </div>
+
         <div class="toggle-item">
-            <label for="soundAlertToggle">🔊 অনুপ্রবেশ শনাক্ত হলে জোরালো সাইরেন বাজবে</label>
+            <label for="seismicToggle">📳 সিসমিক ‘দরজা ও মেঝে’ কম্পন সেন্সর</label>
+            <input type="checkbox" id="seismicToggle" onchange="toggleSeismicSensor()" checked>
+        </div>
+
+        <div class="toggle-item">
+            <label for="camTrapToggle">📸 অটো ইন্ট্রুডার স্ন্যাপশট ও স্ট্রোব ফ্ল্যাশ</label>
+            <div>
+                <select id="camFacingSelect" class="mini-select" onchange="restartCameraIfActive()">
+                    <option value="user">Front (সেলফি)</option>
+                    <option value="environment">Back + Flash</option>
+                </select>
+                <input type="checkbox" id="camTrapToggle" onchange="toggleCamTrap()">
+            </div>
+        </div>
+
+        <div class="toggle-item">
+            <label for="audioRecToggle">🎙️ ব্ল্যাক-বক্স অটো ভয়েস রেকর্ডার (৮ সেকেন্ড)</label>
+            <input type="checkbox" id="audioRecToggle" onchange="prepareBlackBoxAudio()">
+        </div>
+
+        <div class="toggle-item">
+            <label for="voiceAlertToggle">🗣️ J.A.R.V.I.S. বাংলা ভয়েস সতর্কবার্তা</label>
+            <input type="checkbox" id="voiceAlertToggle" checked>
+        </div>
+
+        <div class="toggle-item">
+            <label for="soundAlertToggle">🚨 জোরালো সাইবার-সাইরেন ও ভাইব্রেশন</label>
             <input type="checkbox" id="soundAlertToggle" checked>
         </div>
-        <div class="toggle-item">
-            <label for="vibeToggle">📳 সাইলেন্ট ভাইব্রেশন অ্যালার্ট (পকেট মোড)</label>
-            <input type="checkbox" id="vibeToggle" checked>
+    </div>
+
+    <!-- Evidence Vault (Captured Photos & Audio) -->
+    <div class="vault-card">
+        <div class="vault-title">
+            <span>🗂️ EVIDENCE VAULT (প্রমাণ ভল্ট)</span>
+            <span id="evCount" style="color:var(--muted);">0 ITEMS</span>
+        </div>
+        <div class="evidence-grid" id="evidenceGrid">
+            <div style="grid-column: span 2; font-size: 0.7rem; color: var(--muted); text-align: center; padding: 8px;">
+                অনুপ্রবেশ শনাক্ত হলে তোলা ছবি ও রেকর্ড করা অডিও এখানে জমা হবে।
+            </div>
         </div>
     </div>
 
     <!-- Tactical Event Terminal -->
     <div class="log-box" id="logBox">
-        <div class="log-line ok">[SYS] LEVIATHAN LOUD-SIREN ENGINE READY...</div>
-        <div class="log-line">[INFO] ফোনের Media Volume বাড়িয়ে '🔊 সাউন্ড টেস্ট' চাপুন।</div>
+        <div class="log-line ok">[SYS] LEVIATHAN v2.0 OVERLORD CORE INITIALIZED...</div>
+        <div class="log-line">[TIP] ঘোস্ট মোড আনলক করতে ক্যালকুলেটরে 1337= চাপুন।</div>
     </div>
 
 </div>
+
+<!-- Hidden Video & Canvas for Silent Snapshots -->
+<video id="hiddenVideo" autoplay playsinline muted></video>
+<canvas id="hiddenCanvas"></canvas>
+
+<!-- Ghost Camouflage Mode: Fake Calculator -->
+<div id="ghostOverlay">
+    <div class="calc-top-bar">
+        <span>Standard Calculator</span>
+        <button class="stealth-btn" onclick="enablePureBlackout()">🌑 ব্ল্যাক স্ক্রিন</button>
+    </div>
+    <div class="calc-display" id="calcDisplay">0</div>
+    <div class="calc-grid">
+        <button class="c-btn c-fn" onclick="calcInput('C')">AC</button>
+        <button class="c-btn c-fn" onclick="calcInput('DEL')">⌫</button>
+        <button class="c-btn c-fn" onclick="calcInput('%')">%</button>
+        <button class="c-btn c-op" onclick="calcInput('/')">÷</button>
+
+        <button class="c-btn" onclick="calcInput('7')">7</button>
+        <button class="c-btn" onclick="calcInput('8')">8</button>
+        <button class="c-btn" onclick="calcInput('9')">9</button>
+        <button class="c-btn c-op" onclick="calcInput('*')">×</button>
+
+        <button class="c-btn" onclick="calcInput('4')">4</button>
+        <button class="c-btn" onclick="calcInput('5')">5</button>
+        <button class="c-btn" onclick="calcInput('6')">6</button>
+        <button class="c-btn c-op" onclick="calcInput('-')">−</button>
+
+        <button class="c-btn" onclick="calcInput('1')">1</button>
+        <button class="c-btn" onclick="calcInput('2')">2</button>
+        <button class="c-btn" onclick="calcInput('3')">3</button>
+        <button class="c-btn c-op" onclick="calcInput('+')">+</button>
+
+        <button class="c-btn" style="grid-column: span 2;" onclick="calcInput('0')">0</button>
+        <button class="c-btn" onclick="calcInput('.')">.</button>
+        <button class="c-btn c-op" onclick="calcEquals()">=</button>
+    </div>
+</div>
+
+<!-- Pure Blackout Screen (Double tap anywhere to return to Calculator) -->
+<div id="pureBlackCover" ondblclick="disablePureBlackout()"></div>
 
 <script>
     let isScanning = false;
     let scanTimer = null;
     let sweepAngle = 0;
 
-    // RF Telemetry Variables
+    // RF Telemetry
     let rttHistory = [];
     let jitterHistory = new Array(60).fill(0);
-    let baselineRtt = null;
     let baselineJitter = 4.0;
     let isCalibrating = false;
     let calSamples = [];
@@ -247,14 +390,29 @@
     let currentMotionScore = 0;
     let radarBlips = [];
     let lastAlertTime = 0;
+    let evidenceCount = 0;
 
-    // Acoustic Doppler Sonar Variables
+    // Audio & Doppler
     let sonarActive = false;
     let audioCtx = null;
     let analyserNode = null;
     let sonarOsc = null;
     let micStream = null;
     let prevSpectrum = null;
+
+    // Black-Box Audio Recorder
+    let blackBoxStream = null;
+    let isRecordingAudio = false;
+
+    // Camera & Strobe Torch
+    let camStream = null;
+    let videoTrack = null;
+    let isStrobing = false;
+
+    // Seismic Accelerometer
+    let seismicEnabled = true;
+    let lastAccel = { x: null, y: null, z: null };
+    let seismicScore = 0;
 
     const radarCanvas = document.getElementById('radarCanvas');
     const rCtx = radarCanvas.getContext('2d');
@@ -263,100 +421,213 @@
 
     window.onload = () => {
         updateNetworkInfo();
+        initSeismicListener();
         requestAnimationFrame(renderVisualLoop);
     };
 
     function initAudioEngine() {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
     function updateNetworkInfo() {
         const badge = document.getElementById('connTypeBadge');
         const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
         if (conn) {
-            const type = (conn.type || conn.effectiveType || 'WIFI').toUpperCase();
-            badge.innerText = `NET: ${type}`;
-        } else {
-            badge.innerText = 'NET: ACTIVE RF';
+            const type = (conn.type || conn.effectiveType || 'RF').toUpperCase();
+            badge.innerText = `NET: ${type}`; } }  function updateSensLabel() { const val = parseInt(document.getElementById('sensSlider').value); let txt = val >= 80 ? 'আল্ট্রা' : (val >= 60 ? 'উচ্চ' : (val < 40 ? 'কম' : 'মাঝারি')); document.getElementById('sensLabel').innerText = `${txt} (${val}\%)`; }  function addLog(msg, type = '') { const box = document.getElementById('logBox'); const ts = new Date().toTimeString().split(' ')[0]; const div = document.createElement('div'); div.className = `log-line ${type}`;
+        div.innerText = `[${ts}]${msg}`;
+        box.prepend(div);
+        if (box.children.length > 40) box.removeChild(box.lastChild);
+    }
+
+    // 1. Seismic Accelerometer Sensor
+    function initSeismicListener() {
+        window.addEventListener('devicemotion', (e) => {
+            if (!seismicEnabled || !isScanning) return;
+            const acc = e.accelerationIncludingGravity || e.acceleration;
+            if (!acc || acc.x === null) return;
+
+            if (lastAccel.x !== null) {
+                const delta = Math.abs(acc.x - lastAccel.x) +
+                              Math.abs(acc.y - lastAccel.y) +
+                              Math.abs(acc.z - lastAccel.z);
+                // Detect micro-vibrations above noise floor (0.18)
+                const spike = Math.max(0, (delta - 0.18) * 35);
+                seismicScore = Math.min(85, Math.max(seismicScore * 0.7, spike));
+                document.getElementById('seismicVal').innerText = delta.toFixed(2);
+            }
+            lastAccel = { x: acc.x, y: acc.y, z: acc.z };
+        });
+    }
+
+    function toggleSeismicSensor() {
+        seismicEnabled = document.getElementById('seismicToggle').checked;
+        if (!seismicEnabled) {
+            seismicScore = 0;
+            document.getElementById('seismicVal').innerText = 'OFF';
+        }
+        addLog(`সিসমিক কম্পন সেন্সর ${seismicEnabled ? 'চালু' : 'বন্ধ'} করা হয়েছে।`); }  // 2. Camera Trap & LED Strobe Torch async function toggleCamTrap() { const checked = document.getElementById('camTrapToggle').checked; if (!checked) { if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; videoTrack = null; } addLog('অটো ক্যামেরা ও ফ্ল্যাশ স্ট্রোব বন্ধ করা হয়েছে।'); return; }  const facing = document.getElementById('camFacingSelect').value; try { camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false }); const vid = document.getElementById('hiddenVideo'); vid.srcObject = camStream; videoTrack = camStream.getVideoTracks()[0]; addLog(`📸 ইন্ট্রুডার ক্যামেরা সক্রিয় (${facing === 'user' ? 'Front' : 'Back + Torch'})!`, 'ok');
+        } catch (err) {
+            document.getElementById('camTrapToggle').checked = false;
+            alert('ক্যামেরা পারমিশন না থাকায় অটো-স্ন্যাপশট চালু করা যায়নি।');
         }
     }
 
-    function updateSensLabel() {
-        const val = parseInt(document.getElementById('sensSlider').value);
-        let txt = 'মাঝারি';
-        if (val >= 80) txt = 'আল্ট্রা';
-        else if (val >= 60) txt = 'উচ্চ';
-        else if (val < 40) txt = 'কম';
-        document.getElementById('sensLabel').innerText = `${txt} (${val}%)`;
+    async function restartCameraIfActive() {
+        if (document.getElementById('camTrapToggle').checked) {
+            if (camStream) camStream.getTracks().forEach(t => t.stop());
+            await toggleCamTrap();
+        }
     }
 
-    function addLog(msg, type = '') {
-        const box = document.getElementById('logBox');
-        const now = new Date();
-        const ts = now.toTimeString().split(' ')[0];
-        const div = document.createElement('div');
-        div.className = `log-line ${type}`;
-        div.innerText = `[${ts}] ${msg}`;
-        box.prepend(div);
-        if (box.children.length > 35) box.removeChild(box.lastChild);
+    function captureIntruderSnapshot() {
+        if (!camStream) return;
+        const vid = document.getElementById('hiddenVideo');
+        const cvs = document.getElementById('hiddenCanvas');
+        if (vid.videoWidth === 0) return;
+
+        cvs.width = vid.videoWidth;
+        cvs.height = vid.videoHeight;
+        const ctx = cvs.getContext('2d');
+        ctx.drawImage(vid, 0, 0, cvs.width, cvs.height);
+
+        // Stamp tactical watermark
+        const ts = new Date().toLocaleTimeString();
+        ctx.fillStyle = 'rgba(255, 42, 85, 0.85)';
+        ctx.fillRect(0, cvs.height - 28, cvs.width, 28);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px monospace';
+        ctx.fillText(`LEVIATHAN BREACH // ${ts}`, 10, cvs.height - 9);  const dataUrl = cvs.toDataURL('image/jpeg', 0.82); addEvidenceItem('photo', dataUrl, `IMG_${Date.now()}.jpg`, ts);
+        addLog('📸 অনুপ্রবেশকারীর গোপন ছবি তোলা হয়েছে!', 'alert');
     }
 
-    // High-Power Tactical Dual-Tone Cyber Siren
+    async function triggerFlashStrobe() {
+        if (!videoTrack || isStrobing) return;
+        const caps = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+        if (!caps.torch) return;
+
+        isStrobing = true;
+        try {
+            for (let i = 0; i < 6; i++) {
+                await videoTrack.applyConstraints({ advanced: [{ torch: i % 2 === 0 }] });
+                await new Promise(r => setTimeout(r, 110));
+            }
+            await videoTrack.applyConstraints({ advanced: [{ torch: false }] });
+        } catch (e) {}
+        isStrobing = false;
+    }
+
+    // 3. Black-Box Auto Audio Recorder
+    async function prepareBlackBoxAudio() {
+        const checked = document.getElementById('audioRecToggle').checked;
+        if (!checked) {
+            if (blackBoxStream) {
+                blackBoxStream.getTracks().forEach(t => t.stop());
+                blackBoxStream = null;
+            }
+            addLog('ব্ল্যাক-বক্স ভয়েস রেকর্ডার বন্ধ করা হয়েছে।');
+            return;
+        }
+        try {
+            blackBoxStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            addLog('🎙️ ব্ল্যাক-বক্স অটো ভয়েস রেকর্ডার প্রস্তুত!', 'ok');
+        } catch (err) {
+            document.getElementById('audioRecToggle').checked = false;
+            alert('মাইক্রোফোন অনুমতি না থাকায় অটো-রেকর্ডার চালু হয়নি।');
+        }
+    }
+
+    function triggerBlackBoxRecording() {
+        if (!blackBoxStream || isRecordingAudio) return;
+        try {
+            isRecordingAudio = true;
+            const recorder = new MediaRecorder(blackBoxStream);
+            const chunks = [];
+            recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const url = URL.createObjectURL(blob);
+                const ts = new Date().toLocaleTimeString();
+                addEvidenceItem('audio', url, `AUDIO_${Date.now()}.webm`, ts); addLog('🎙️ ৮ সেকেন্ডের অডিও প্রমাণ সেভ হয়েছে!', 'ok'); isRecordingAudio = false; }; recorder.start(); addLog('🔴 গোপন অডিও রেকর্ডিং শুরু হয়েছে (৮ সেকেন্ড)...', 'alert'); setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 8000); } catch (e) { isRecordingAudio = false; } }  function addEvidenceItem(type, url, filename, ts) { const grid = document.getElementById('evidenceGrid'); if (evidenceCount === 0) grid.innerHTML = ''; evidenceCount++; document.getElementById('evCount').innerText = `${evidenceCount} ITEMS`;
+
+        const card = document.createElement('div');
+        card.className = 'ev-item';
+        if (type === 'photo') {
+            card.innerHTML = `
+                <img src="${url}" alt="Intruder">
+                <div style="color:var(--danger);">📸 ${ts}</div>
+                <a class="ev-dl" href="${url}" download="${filename}">⬇ ডাউনলোড</a>
+            `;
+        } else {
+            card.innerHTML = `
+                <div style="color:var(--cyan); padding:6px 0;">🎙️ ভয়েস ক্লিপ (${ts})</div>
+                <audio controls src="${url}"></audio>
+                <a class="ev-dl" href="${url}" download="${filename}">⬇ সেভ অডিও</a>
+            `;
+        }
+        grid.prepend(card);
+    }
+
+    // 4. Loud Siren & J.A.R.V.I.S. Voice Alert
     function triggerLoudCyberSiren(forceTest = false) {
         if (!forceTest && !document.getElementById('soundAlertToggle').checked) return;
         try {
             initAudioEngine();
             const now = audioCtx.currentTime;
-
-            // 3 rapid high-piercing tactical siren bursts
             for (let i = 0; i < 3; i++) {
-                const startTime = now + i * 0.24;
+                const startTime = now + i * 0.23;
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(880, startTime);
-                osc.frequency.exponentialRampToValueAtTime(1480, startTime + 0.11);
-                osc.frequency.exponentialRampToValueAtTime(920, startTime + 0.22);
+                osc.frequency.setValueAtTime(900, startTime);
+                osc.frequency.exponentialRampToValueAtTime(1520, startTime + 0.11);
+                osc.frequency.exponentialRampToValueAtTime(920, startTime + 0.21);
 
-                // Maximum safe browser speaker gain (0.95)
                 gain.gain.setValueAtTime(0.01, startTime);
                 gain.gain.linearRampToValueAtTime(0.95, startTime + 0.02);
-                gain.gain.setValueAtTime(0.95, startTime + 0.18);
-                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.23);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.22);
 
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
-
                 osc.start(startTime);
-                osc.stop(startTime + 0.24);
+                osc.stop(startTime + 0.23);
             }
+        } catch (e) {}
+    }
+
+    function speakJarvisAlert(forceTest = false) {
+        if (!forceTest && !document.getElementById('voiceAlertToggle').checked) return;
+        if (!('speechSynthesis' in window)) return;
+        try {
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance('সতর্কতা! রুমের ভেতর অনুপ্রবেশ শনাক্ত হয়েছে।');
+            msg.lang = 'bn-BD';
+            msg.rate = 1.05;
+            msg.pitch = 0.85;
+            msg.volume = 1.0;
+            window.speechSynthesis.speak(msg);
         } catch (e) {}
     }
 
     function testSirenSound() {
         initAudioEngine();
         triggerLoudCyberSiren(true);
-        if (navigator.vibrate) navigator.vibrate([150, 70, 150]);
-        addLog('🔊 সাউন্ড টেস্ট: জোরালো সাইবার-সাইরেন বাজানো হয়েছে!', 'ok');
+        setTimeout(() => speakJarvisAlert(true), 750);
+        if (navigator.vibrate) navigator.vibrate([160, 70, 160]);
+        addLog('🔊 সাইরেন এবং J.A.R.V.I.S. ভয়েস টেস্ট সম্পন্ন!', 'ok');
     }
 
-    // Optional 19.5kHz Ultrasonic Doppler Sonar Assist
+    // 5. Ultrasonic 19.5kHz Doppler Sonar
     async function toggleAcousticSonar() {
         const checked = document.getElementById('sonarToggle').checked;
         if (!checked) {
             sonarActive = false;
             if (sonarOsc) { try { sonarOsc.stop(); } catch (e) {} sonarOsc = null; }
             if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-            addLog('Acoustic Sonar Boost বন্ধ করা হয়েছে।');
+            addLog('Acoustic Sonar বন্ধ করা হয়েছে।');
             return;
         }
-
         try {
             initAudioEngine();
             micStream = await navigator.mediaDevices.getUserMedia({
@@ -381,7 +652,7 @@
             addLog('🦇 19.5kHz Ultrasonic Doppler Sonar সক্রিয়!', 'ok');
         } catch (err) {
             document.getElementById('sonarToggle').checked = false;
-            alert('মাইক্রোফোন অনুমতি না থাকায় Acoustic Sonar চালু করা যায়নি।');
+            alert('মাইক্রোফোন অনুমতি না থাকায় Acoustic Sonar চালু হয়নি।');
         }
     }
 
@@ -394,14 +665,13 @@
 
         let diffSum = 0;
         if (prevSpectrum) {
-            for (let i = startBin; i < endBin; i++) {
-                diffSum += Math.abs(data[i] - prevSpectrum[i]);
-            }
+            for (let i = startBin; i < endBin; i++) diffSum += Math.abs(data[i] - prevSpectrum[i]);
         }
         prevSpectrum = data.slice();
         return Math.min(75, diffSum * 0.5);
     }
 
+    // Core Radar Loop
     function toggleRadar() {
         initAudioEngine();
         const btn = document.getElementById('scanBtn');
@@ -414,48 +684,37 @@
             addLog('রাডার স্ক্যানিং বন্ধ করা হয়েছে।');
             return;
         }
-
         isScanning = true;
         btn.innerText = '⏹️ রাডার বন্ধ করুন';
         btn.classList.add('active-scan');
-        addLog('RF ওয়াই-ফাই পেরিমিটার স্ক্যান শুরু হয়েছে...', 'ok');
+        addLog('মাল্টি-সেন্সর পেরিমিটার স্ক্যান শুরু হয়েছে...', 'ok');
         calibrateBaseline();
         runRfProbeLoop();
     }
 
     function calibrateBaseline() {
         initAudioEngine();
-        if (!isScanning) {
-            toggleRadar();
-            return;
-        }
+        if (!isScanning) { toggleRadar(); return; }
         isCalibrating = true;
         calSamples = [];
+        seismicScore = 0;
         document.getElementById('baselineLabel').innerText = 'CALIBRATING...';
-        addLog('রুমের ফাঁকা সিগন্যাল বেসলাইন মাপা হচ্ছে (৩ সেকেন্ড স্থির থাকুন)...');
+        addLog('রুমের সিগন্যাল ক্যালিব্রেশন চলছে (৩ সেকেন্ড স্থির রাখুন)...');
     }
 
     async function measureSingleRfPing() {
-        const endpoints = [
-            'https://1.1.1.1/cdn-cgi/trace',
-            'https://www.google.com/generate_204'
-        ];
+        const endpoints = ['https://1.1.1.1/cdn-cgi/trace', 'https://www.google.com/generate_204'];
         const target = endpoints[Math.floor(Math.random() * endpoints.length)] + '?t=' + Date.now();
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 900);
-
         const t0 = performance.now();
-        try {
-            await fetch(target, { mode: 'no-cors', cache: 'no-store', signal: controller.signal });
-        } catch (e) {}
+        try { await fetch(target, { mode: 'no-cors', cache: 'no-store', signal: controller.signal }); } catch (e) {}
         clearTimeout(timeout);
-        const t1 = performance.now();
-        return Math.min(850, t1 - t0);
+        return Math.min(850, performance.now() - t0);
     }
 
     async function runRfProbeLoop() {
         if (!isScanning) return;
-
         const rtt = await measureSingleRfPing();
         if (!isScanning) return;
 
@@ -468,78 +727,48 @@
         if (isCalibrating) {
             calSamples.push(instantJitter);
             if (calSamples.length >= 12) {
-                baselineRtt = avgRtt;
                 const meanJit = calSamples.reduce((a, b) => a + b, 0) / calSamples.length;
                 baselineJitter = Math.max(2.0, meanJit * 1.25);
                 isCalibrating = false;
                 document.getElementById('baselineLabel').innerText = `LOCKED (${baselineJitter.toFixed(1)}ms)`;
-                addLog(`বেসলাইন লক সম্পন্ন! স্বাভাবিক জিটার: ${baselineJitter.toFixed(1)}ms`, 'ok');
-            }
-        }
-
-        const sensitivity = parseInt(document.getElementById('sensSlider').value) / 100;
-        const dopplerScore = measureAcousticDoppler();
-
-        const excessJitter = Math.max(0, instantJitter - baselineJitter);
-        const rawRfScore = (excessJitter / (26 * (1.25 - sensitivity))) * 100;
-        const combinedScore = Math.min(100, Math.round(rawRfScore * 0.75 + dopplerScore * 0.72));
-
-        currentMotionScore = Math.round(currentMotionScore * 0.42 + combinedScore * 0.58);
-
-        jitterHistory.push(currentMotionScore);
-        if (jitterHistory.length > 60) jitterHistory.shift();
-
-        document.getElementById('rttVal').innerText = `${Math.round(rtt)} ms`;
-        document.getElementById('jitterVal').innerText = `${instantJitter.toFixed(1)} ms`;
-        document.getElementById('motionScore').innerText = `${currentMotionScore}%`;
+                addLog(`বেসলাইন লক সম্পন্ন (${baselineJitter.toFixed(1)}ms)`, 'ok'); } }  const sensitivity = parseInt(document.getElementById('sensSlider').value) / 100; const dopplerScore = measureAcousticDoppler(); const excessJitter = Math.max(0, instantJitter - baselineJitter); const rawRfScore = (excessJitter / (26 * (1.25 - sensitivity))) * 100;  // Fuse RF Jitter + Acoustic Doppler + Seismic Accelerometer const fusedScore = Math.min(100, Math.round( Math.max(rawRfScore * 0.75 + dopplerScore * 0.72, seismicScore * (0.6 + sensitivity * 0.5)) ));  currentMotionScore = Math.round(currentMotionScore * 0.4 + fusedScore * 0.6); seismicScore *= 0.65;  jitterHistory.push(currentMotionScore); if (jitterHistory.length > 60) jitterHistory.shift();  document.getElementById('rttVal').innerText = `${Math.round(rtt)} ms`;
+        document.getElementById('jitterVal').innerText = `${instantJitter.toFixed(1)} ms`; document.getElementById('motionScore').innerText = `${currentMotionScore}%`;
 
         evaluateThreatLevel(currentMotionScore, instantJitter);
-
         scanTimer = setTimeout(runRfProbeLoop, 180);
     }
 
     function evaluateThreatLevel(score, jitter) {
         if (isCalibrating) {
-            setThreatState('warn', '🎯 বেসলাইন ক্যালিব্রেশন চলছে...', 'দয়া করে ফোন ও আশপাশ স্থির রাখুন');
+            setThreatState('warn', '🎯 বেসলাইন ক্যালিব্রেশন চলছে...', 'ফোন ও আশপাশ স্থির রাখুন');
             return;
         }
-
         const now = Date.now();
         if (score >= 55) {
-            setThreatState('breach', '🚨 সতর্কতা: আড়ালে অবস্থান / নড়াচড়া শনাক্ত!', `RF সিগন্যাল বিচ্যুতি: ${score}% (জিটার: ${jitter.toFixed(1)}ms)`);
+            setThreatState('breach', '🚨 অনুপ্রবেশ / নড়াচড়া শনাক্ত!', `থ্রেট লেভেল: ${score}\% \vert{} জিটার: ${jitter.toFixed(1)}ms`);
             spawnRadarBlip(score);
-            if (now - lastAlertTime > 1800) {
+            if (now - lastAlertTime > 2600) {
                 lastAlertTime = now;
-                addLog(`⚠️ [BREACH] অনুপ্রবেশ শনাক্ত (${score}%) — সাইরেন অ্যাক্টিভ!`, 'alert');
-                triggerLoudCyberSiren(false);
-                if (document.getElementById('vibeToggle').checked && navigator.vibrate) {
-                    navigator.vibrate([220, 80, 220]);
-                }
-            }
-        } else if (score >= 28) {
-            setThreatState('warn', '🟡 সূক্ষ্ম তরঙ্গ পরিবর্তন (Micro-Motion)', `পেরিমিটারে মৃদু নড়াচড়া: ${score}%`);
+                addLog(`⚠️ [BREACH] অনুপ্রবেশ শনাক্ত (${score}\%)!`, 'alert'); triggerLoudCyberSiren(false); setTimeout(() => speakJarvisAlert(false), 750); captureIntruderSnapshot(); triggerFlashStrobe(); triggerBlackBoxRecording(); if (document.getElementById('soundAlertToggle').checked && navigator.vibrate) { navigator.vibrate([250, 80, 250]); } } } else if (score >= 28) { setThreatState('warn', '🟡 সূক্ষ্ম তরঙ্গ পরিবর্তন (Micro-Motion)', `পেরিমিটারে মৃদু নড়াচড়া: ${score}%`);
             if (Math.random() > 0.5) spawnRadarBlip(score);
         } else {
-            setThreatState('clear', '🟢 পেরিমিটার নিরাপদ (রুম ফাঁকা)', 'কোনো অস্বাভাবিক RF বা ডপলার তরঙ্গ নেই');
+            setThreatState('clear', '🟢 পেরিমিটার নিরাপদ (রুম ফাঁকা)', 'সব সেন্সর সক্রিয় ও স্বাভাবিক');
         }
     }
 
     function setThreatState(mode, title, sub) {
         const banner = document.getElementById('threatBanner');
-        const tEl = document.getElementById('threatTitle');
-        const sEl = document.getElementById('threatSub');
         banner.className = 'threat-banner';
         if (mode === 'warn') banner.classList.add('warn');
         if (mode === 'breach') banner.classList.add('breach');
-        tEl.innerText = title;
-        sEl.innerText = sub;
+        document.getElementById('threatTitle').innerText = title;
+        document.getElementById('threatSub').innerText = sub;
     }
 
     function spawnRadarBlip(intensity) {
         const normalizedDist = Math.max(0.18, Math.min(0.88, 1 - (intensity / 115)));
-        const jitterAngle = sweepAngle + (Math.random() - 0.5) * 0.45;
         radarBlips.push({
-            angle: jitterAngle,
+            angle: sweepAngle + (Math.random() - 0.5) * 0.45,
             dist: normalizedDist,
             life: 1.0,
             high: intensity >= 55
@@ -554,12 +783,8 @@
     }
 
     function drawRadar() {
-        const w = radarCanvas.width;
-        const h = radarCanvas.height;
-        const cx = w / 2;
-        const cy = h / 2;
-        const maxR = cx - 12;
-
+        const w = radarCanvas.width, h = radarCanvas.height;
+        const cx = w / 2, cy = h / 2, maxR = cx - 12;
         rCtx.clearRect(0, 0, w, h);
 
         rCtx.strokeStyle = 'rgba(0, 255, 136, 0.22)';
@@ -568,27 +793,9 @@
             rCtx.beginPath();
             rCtx.arc(cx, cy, maxR * ratio, 0, Math.PI * 2);
             rCtx.stroke();
-
             rCtx.fillStyle = 'rgba(0, 255, 136, 0.45)';
             rCtx.font = '10px monospace';
-            rCtx.fillText(`${(idx + 1) * 2}m`, cx + 4, cy - maxR * ratio + 11);
-        });
-
-        rCtx.beginPath();
-        rCtx.moveTo(cx - maxR, cy); rCtx.lineTo(cx + maxR, cy);
-        rCtx.moveTo(cx, cy - maxR); rCtx.lineTo(cx, cy + maxR);
-        rCtx.stroke();
-
-        rCtx.fillStyle = '#00ff88';
-        rCtx.beginPath();
-        rCtx.arc(cx, cy, 4.5, 0, Math.PI * 2);
-        rCtx.fill();
-
-        if (isScanning) {
-            sweepAngle = (sweepAngle + 0.045) % (Math.PI * 2);
-            for (let i = 0; i < 18; i++) {
-                const a = sweepAngle - i * 0.03;
-                rCtx.strokeStyle = `rgba(0, 255, 136, ${(1 - i / 18) * 0.28})`;
+            rCtx.fillText(`${(idx + 1) * 2}m`, cx + 4, cy - maxR * ratio + 11); });  rCtx.beginPath(); rCtx.moveTo(cx - maxR, cy); rCtx.lineTo(cx + maxR, cy); rCtx.moveTo(cx, cy - maxR); rCtx.lineTo(cx, cy + maxR); rCtx.stroke();  rCtx.fillStyle = '#00ff88'; rCtx.beginPath(); rCtx.arc(cx, cy, 4.5, 0, Math.PI * 2); rCtx.fill();  if (isScanning) { sweepAngle = (sweepAngle + 0.045) \% (Math.PI * 2); for (let i = 0; i < 18; i++) { const a = sweepAngle - i * 0.03; rCtx.strokeStyle = `rgba(0, 255, 136, ${(1 - i / 18) * 0.28})`;
                 rCtx.lineWidth = 2;
                 rCtx.beginPath();
                 rCtx.moveTo(cx, cy);
@@ -601,52 +808,10 @@
             const b = radarBlips[i];
             const bx = cx + Math.cos(b.angle) * (b.dist * maxR);
             const by = cy + Math.sin(b.angle) * (b.dist * maxR);
-
-            rCtx.fillStyle = b.high
-                ? `rgba(255, 42, 85, ${b.life})`
-                : `rgba(245, 158, 11, ${b.life})`;
+            rCtx.fillStyle = b.high ? `rgba(255, 42, 85, ${b.life})` : `rgba(245, 158, 11, ${b.life})`;
             rCtx.beginPath();
             rCtx.arc(bx, by, b.high ? 7 : 5, 0, Math.PI * 2);
             rCtx.fill();
 
             if (b.high) {
-                rCtx.strokeStyle = `rgba(255, 42, 85, ${b.life})`;
-                rCtx.lineWidth = 1.5;
-                rCtx.strokeRect(bx - 10, by - 10, 20, 20);
-            }
-
-            b.life -= 0.015;
-            if (b.life <= 0) radarBlips.splice(i, 1);
-        }
-    }
-
-    function drawWaveform() {
-        const w = waveCanvas.width;
-        const h = waveCanvas.height;
-        wCtx.clearRect(0, 0, w, h);
-
-        wCtx.strokeStyle = 'rgba(255, 42, 85, 0.35)';
-        wCtx.setLineDash([4, 4]);
-        const threshY = h - (0.55 * (h - 10)) - 5;
-        wCtx.beginPath();
-        wCtx.moveTo(0, threshY);
-        wCtx.lineTo(w, threshY);
-        wCtx.stroke();
-        wCtx.setLineDash([]);
-
-        wCtx.strokeStyle = currentMotionScore >= 55 ? '#ff2a55' : '#00ff88';
-        wCtx.lineWidth = 2;
-        wCtx.beginPath();
-
-        const step = w / (jitterHistory.length - 1);
-        jitterHistory.forEach((val, idx) => {
-            const x = idx * step;
-            const y = h - ((val / 100) * (h - 10)) - 5;
-            if (idx === 0) wCtx.moveTo(x, y);
-            else wCtx.lineTo(x, y);
-        });
-        wCtx.stroke();
-    }
-</script>
-</body>
-</html>
+                rCtx.strokeStyle = `rgba(255, 
