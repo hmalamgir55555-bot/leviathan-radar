@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>LEVIATHAN v2.1 // Overlord Radar</title>
+<title>LEVIATHAN v2.2 // Overlord Radar</title>
 <style>
 :root{--bg:#030706;--panel:#08120e;--g:#00ff88;--w:#f59e0b;--d:#ff2a55;--c:#00e5ff;--p:#b388ff;--txt:#e2f8ee;--mut:#6b9080;--bd:#122b22}
 *{box-sizing:border-box;font-family:'Courier New',monospace}
@@ -39,7 +39,7 @@ canvas{display:block;width:100%;height:100%}
 input[type=range]{width:100%;accent-color:var(--g)}
 .titem{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid #0e241c;font-size:.73rem}
 .titem input{width:16px;height:16px;accent-color:var(--g)}
-select{background:#030706;color:var(--g);border:1px solid var(--bd);padding:3px;border-radius:4px;font-size:.68rem}
+select{background:#030706;color:var(--g);border:1px solid var(--bd);padding:4px;border-radius:4px;font-size:.7rem}
 .vgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
 .ev{background:#020504;border:1px solid #16382b;border-radius:6px;padding:6px;font-size:.66rem;text-align:center}
 .ev img{width:100%;border-radius:4px;border:1px solid var(--d)}
@@ -57,7 +57,7 @@ select{background:#030706;color:var(--g);border:1px solid var(--bd);padding:3px;
 </head>
 <body>
 <header>
-  <div><div class="brand">👁️ LEVIATHAN v2.1 // OVERLORD</div><div class="sub">RF + Doppler + Seismic + Optical</div></div>
+  <div><div class="brand">👁️ LEVIATHAN v2.2 // OVERLORD</div><div class="sub">RF + Doppler + Seismic + Dual-Cam</div></div>
   <div class="badge" id="netBadge">SYS: READY</div>
 </header>
 
@@ -98,8 +98,11 @@ select{background:#030706;color:var(--g);border:1px solid var(--bd);padding:3px;
     <div class="titem"><label for="tSei">📳 সিসমিক কম্পন সেন্সর</label><input type="checkbox" id="tSei" checked></div>
     <div class="titem">
       <label for="tCam">📸 অটো স্ন্যাপশট ও ফ্ল্যাশ</label>
-      <div>
-        <select id="camMode"><option value="user">Front</option><option value="environment">Back+Flash</option></select>
+      <div style="display:flex;align-items:center;gap:6px">
+        <select id="camMode" onchange="switchCamMode()">
+          <option value="environment">Back + Flash</option>
+          <option value="user">Front (সেলফি)</option>
+        </select>
         <input type="checkbox" id="tCam" onchange="toggleCam()">
       </div>
     </div>
@@ -116,7 +119,7 @@ select{background:#030706;color:var(--g);border:1px solid var(--bd);padding:3px;
   <div class="log" id="logBox"></div>
 </div>
 
-<video id="hVid" autoplay playsinline muted style="display:none"></video>
+<video id="hVid" autoplay playsinline muted style="position:fixed;width:2px;height:2px;opacity:0.01;pointer-events:none"></video>
 <canvas id="hCvs" style="display:none"></canvas>
 
 <div id="ghost">
@@ -191,19 +194,61 @@ function getDoppler(){
   prevSp=d.slice();return Math.min(75,sum*0.5);
 }
 
-async function toggleCam(){
-  if(!document.getElementById('tCam').checked){if(cStr)cStr.getTracks().forEach(t=>t.stop());cStr=null;vTrk=null;return;}
+// Force Hardware Back/Front Camera Switch
+async function startCameraHardware(mode){
+  if(cStr){cStr.getTracks().forEach(t=>t.stop());cStr=null;vTrk=null;}
+  let constraints={video:{facingMode:{exact:mode}},audio:false};
   try{
-    cStr=await navigator.mediaDevices.getUserMedia({video:{facingMode:document.getElementById('camMode').value}});
-    document.getElementById('hVid').srcObject=cStr;vTrk=cStr.getVideoTracks()[0];log('📸 ক্যামেরা ট্র্যাপ সক্রিয়!','ok');
-  }catch(e){document.getElementById('tCam').checked=false;alert('ক্যামেরা অনুমতি দিন');}
+    cStr=await navigator.mediaDevices.getUserMedia(constraints);
+  }catch(err){
+    // Fallback: Enumerate physical video devices and pick rear/front explicitly
+    const devs=await navigator.mediaDevices.enumerateDevices();
+    const cams=devs.filter(d=>d.kind==='videoinput');
+    let target=cams[0];
+    if(cams.length>1){
+      const match=cams.find(c=>mode==='environment'?/back|rear|environment/i.test(c.label):/front|user|selfie/i.test(c.label));
+      target=match||(mode==='environment'?cams[cams.length-1]:cams[0]);
+    }
+    cStr=await navigator.mediaDevices.getUserMedia({video:target?{deviceId:{exact:target.deviceId}}:{facingMode:mode},audio:false});
+  }
+  const vid=document.getElementById('hVid');
+  vid.srcObject=cStr;
+  await vid.play();
+  vTrk=cStr.getVideoTracks()[0];
+  log('📸 ক্যামেরা সক্রিয়: '+(mode==='environment'?'BACK CAM + FLASH':'FRONT CAM'),'ok');
 }
+
+async function toggleCam(){
+  if(!document.getElementById('tCam').checked){
+    if(cStr){cStr.getTracks().forEach(t=>t.stop());cStr=null;vTrk=null;}
+    log('ক্যামেরা বন্ধ করা হয়েছে।');
+    return;
+  }
+  try{
+    await startCameraHardware(document.getElementById('camMode').value);
+  }catch(e){
+    document.getElementById('tCam').checked=false;
+    alert('ক্যামেরা চালু করা যায়নি! ব্রাউজারে ক্যামেরা পারমিশন Allow করুন।');
+  }
+}
+
+async function switchCamMode(){
+  if(document.getElementById('tCam').checked){
+    log('ক্যামেরা পরিবর্তন করা হচ্ছে...');
+    try{
+      await startCameraHardware(document.getElementById('camMode').value);
+    }catch(e){
+      log('ক্যামেরা সুইচ ব্যর্থ হয়েছে!','al');
+    }
+  }
+}
+
 function snap(){
   if(!cStr)return;const v=document.getElementById('hVid'),c=document.getElementById('hCvs');if(!v.videoWidth)return;
   c.width=v.videoWidth;c.height=v.videoHeight;const x=c.getContext('2d');x.drawImage(v,0,0);
   const ts=new Date().toLocaleTimeString();x.fillStyle='rgba(255,42,85,.85)';x.fillRect(0,c.height-26,c.width,26);
   x.fillStyle='#fff';x.font='bold 13px monospace';x.fillText('LEVIATHAN // '+ts,8,c.height-8);
-  addEv('img',c.toDataURL('image/jpeg',0.8),'IMG_'+Date.now()+'.jpg',ts);
+  addEv('img',c.toDataURL('image/jpeg',0.82),'IMG_'+Date.now()+'.jpg',ts);
 }
 async function strobe(){
   if(!vTrk||stBusy)return;const caps=vTrk.getCapabilities?vTrk.getCapabilities():{};if(!caps.torch)return;
@@ -276,7 +321,7 @@ function openGhost(){exp='';document.getElementById('cDisp').innerText='0';docum
 function cin(v){if(v==='C')exp='';else if(v==='D')exp=exp.slice(0,-1);else exp+=v;document.getElementById('cDisp').innerText=exp||'0';}
 function ceq(){if(exp==='1337'){document.getElementById('ghost').style.display='none';exp='';return;}try{exp=String(Function('return('+exp+')')());document.getElementById('cDisp').innerText=exp;}catch(e){document.getElementById('cDisp').innerText='Error';exp='';}}
 
-log('[OK] LEVIATHAN v2.1 ENGINE LOADED!','ok');
+log('[OK] LEVIATHAN v2.2 DUAL-CAM LOADED!','ok');
 requestAnimationFrame(draw);
 </script>
 </body>
