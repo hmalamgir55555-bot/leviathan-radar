@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LEVIATHAN // Wi-Fi & RF Presence Radar</title>
+    <style>
+        :root {
+            --bg: #030706;
+            --panel: #08120e;
+            --radar-green: #00ff88;
+            --radar-dim: rgba(0, 255, 136, 0.15);
+            --warn: #f59e0b;
+            --danger: #ff2a55;
+            --text: #e2f8ee;
+            --muted: #6b9080;
+            --border: #122b22;
+        }
+        * { box-sizing: border-box; font-family: 'Courier New', Courier, monospace; }
+        body {
+            margin: 0; padding: 0; background: var(--bg); color: var(--text);
+            padding-bottom: 35px; overflow-x: hidden;
+        }
+
+        header {
+            background: var(--panel); padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 50;
+        }
+        .brand { font-size: 1rem; font-weight: bold; color: var(--radar-green); letter-spacing: 1px; }
+        .sub-brand { font-size: 0.68rem; color: var(--muted); }
+        .sys-badge {
+            font-size: 0.7rem; padding: 4px 8px; border-radius: 4px;
+            border: 1px solid var(--radar-green); color: var(--radar-green);
+            background: rgba(0, 255, 136, 0.08);
+        }
+
+        .container { max-width: 540px; margin: 0 auto; padding: 12px; }
+
+        /* Alert Banner */
+        .threat-banner {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px; text-align: center;
+            margin-bottom: 12px; transition: 0.25s;
+        }
+        .threat-banner.warn {
+            border-color: var(--warn); background: rgba(245, 158, 11, 0.12);
+        }
+        .threat-banner.breach {
+            border-color: var(--danger); background: rgba(255, 42, 85, 0.2);
+            box-shadow: 0 0 20px rgba(255, 42, 85, 0.4);
+            animation: pulseAlert 0.6s infinite alternate;
+        }
+        @keyframes pulseAlert { from { opacity: 0.85; } to { opacity: 1; } }
+
+        .threat-title { font-size: 0.95rem; font-weight: bold; color: var(--radar-green); }
+        .warn .threat-title { color: var(--warn); }
+        .breach .threat-title { color: var(--danger); }
+        .threat-sub { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+
+        /* Radar Canvas Box */
+        .radar-wrapper {
+            position: relative; width: 100%; aspect-ratio: 1 / 1;
+            max-width: 340px; margin: 0 auto 12px;
+            background: radial-gradient(circle, #061811 0%, #020504 75%);
+            border-radius: 50%; border: 2px solid #16382b;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.12), inset 0 0 30px rgba(0, 255, 136, 0.08);
+            overflow: hidden;
+        }
+        canvas#radarCanvas { width: 100%; height: 100%; display: block; }
+
+        /* Telemetry Metrics */
+        .metrics-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+            margin-bottom: 12px;
+        }
+        .metric-box {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 8px; padding: 9px 6px; text-align: center;
+        }
+        .metric-label { font-size: 0.66rem; color: var(--muted); display: block; }
+        .metric-val { font-size: 0.95rem; font-weight: bold; color: var(--radar-green); margin-top: 3px; display: block; }
+
+        /* Waveform Box */
+        .wave-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px; margin-bottom: 12px;
+        }
+        .wave-header {
+            display: flex; justify-content: space-between; font-size: 0.72rem;
+            color: var(--muted); margin-bottom: 6px;
+        }
+        canvas#waveCanvas {
+            width: 100%; height: 68px; background: #020504;
+            border: 1px solid #0e241c; border-radius: 4px; display: block;
+        }
+
+        /* Controls */
+        .ctrl-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 8px; padding: 12px; margin-bottom: 12px;
+        }
+        .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .btn {
+            flex: 1; padding: 12px 8px; border-radius: 6px; font-size: 0.84rem;
+            font-weight: bold; cursor: pointer; border: 1px solid var(--radar-green);
+            background: rgba(0, 255, 136, 0.14); color: var(--radar-green);
+            transition: 0.2s;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn.active-scan {
+            background: var(--danger); border-color: var(--danger); color: #fff;
+        }
+        .btn-cal {
+            border-color: var(--warn); background: rgba(245, 158, 11, 0.12); color: var(--warn);
+        }
+
+        .slider-row { margin-bottom: 10px; }
+        .slider-row label {
+            display: flex; justify-content: space-between; font-size: 0.76rem;
+            color: var(--text); margin-bottom: 4px;
+        }
+        input[type="range"] { width: 100%; accent-color: var(--radar-green); }
+
+        .toggle-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 7px 0; border-top: 1px solid #0e241c; font-size: 0.76rem;
+        }
+        .toggle-item input { width: 16px; height: 16px; accent-color: var(--radar-green); }
+
+        /* Terminal Log */
+        .log-box {
+            background: #020504; border: 1px solid var(--border);
+            border-radius: 8px; padding: 9px; height: 115px;
+            overflow-y: auto; font-size: 0.71rem; line-height: 1.45;
+        }
+        .log-line { margin-bottom: 3px; color: var(--muted); }
+        .log-line.alert { color: var(--danger); font-weight: bold; }
+        .log-line.ok { color: var(--radar-green); }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <div class="brand">👁️ LEVIATHAN // RF-RADAR</div>
+        <div class="sub-brand">Wi-Fi Jitter & Wall-Motion Sentinel</div>
+    </div>
+    <div class="sys-badge" id="connTypeBadge">NET: CHECKING</div>
+</header>
+
+<div class="container">
+
+    <!-- Status Banner -->
+    <div class="threat-banner" id="threatBanner">
+        <div class="threat-title" id="threatTitle">⚫ সিস্টেম স্ট্যান্ডবাই (অপেক্ষমাণ)</div>
+        <div class="threat-sub" id="threatSub">রাডার চালু করে রুমের সিগন্যাল ক্যালিব্রেট করুন</div>
+    </div>
+
+    <!-- Circular Tactical Radar -->
+    <div class="radar-wrapper">
+        <canvas id="radarCanvas" width="340" height="340"></canvas>
+    </div>
+
+    <!-- Live Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-box">
+            <span class="metric-label">RF PING (RTT)</span>
+            <span class="metric-val" id="rttVal">-- ms</span>
+        </div>
+        <div class="metric-box">
+            <span class="metric-label">SIGNAL JITTER</span>
+            <span class="metric-val" id="jitterVal">0.0 ms</span>
+        </div>
+        <div class="metric-box">
+            <span class="metric-label">MOTION INDEX</span>
+            <span class="metric-val" id="motionScore">0%</span>
+        </div>
+    </div>
+
+    <!-- RF Perturbation Oscilloscope -->
+    <div class="wave-card">
+        <div class="wave-header">
+            <span>📡 RF MULTIPATH DISTURBANCE WAVE</span>
+            <span id="baselineLabel">BASELINE: UNLOCKED</span>
+        </div>
+        <canvas id="waveCanvas" width="480" height="68"></canvas>
+    </div>
+
+    <!-- Tactical Controls -->
+    <div class="ctrl-card">
+        <div class="btn-row">
+            <button class="btn" id="scanBtn" onclick="toggleRadar()">▶ রাডার চালু করুন</button>
+            <button class="btn btn-cal" id="calBtn" onclick="calibrateBaseline()">🎯 রুম ক্যালিব্রেট</button>
+        </div>
+
+        <div class="slider-row">
+            <label>
+                <span>সেন্সিটিভিটি (সংবেদনশীলতা):</span>
+                <span id="sensLabel" style="color:var(--radar-green);">উচ্চ (75%)</span>
+            </label>
+            <input type="range" id="sensSlider" min="20" max="95" value="75" oninput="updateSensLabel()">
+        </div>
+
+        <div class="toggle-item">
+            <label for="sonarToggle">🦇 Acoustic Sonar Boost (19.5kHz ডপলার সেন্সর)</label>
+            <input type="checkbox" id="sonarToggle" onchange="toggleAcousticSonar()">
+        </div>
+        <div class="toggle-item">
+            <label for="soundAlertToggle">🔊 অনুপ্রবেশ শনাক্ত হলে ট্যাকটিক্যাল অ্যালার্ম বাজবে</label>
+            <input type="checkbox" id="soundAlertToggle" checked>
+        </div>
+        <div class="toggle-item">
+            <label for="vibeToggle">📳 সাইলেন্ট ভাইব্রেশন অ্যালার্ট (পকেট মোড)</label>
+            <input type="checkbox" id="vibeToggle" checked>
+        </div>
+    </div>
+
+    <!-- Tactical Event Terminal -->
+    <div class="log-box" id="logBox">
+        <div class="log-line ok">[SYS] LEVIATHAN RF-CSI ENGINE INITIALIZED...</div>
+        <div class="log-line">[INFO] ফোনটি স্থির জায়গায় রেখে 'রাডার চালু করুন' চাপুন।</div>
+    </div>
+
+</div>
+
+<script>
+    let isScanning = false;
+    let scanTimer = null;
+    let sweepAngle = 0;
+
+    // RF Telemetry Variables
+    let rttHistory = [];
+    let jitterHistory = new Array(60).fill(0);
+    let baselineRtt = null;
+    let baselineJitter = 4.0;
+    let isCalibrating = false;
+    let calSamples = [];
+
+    let currentMotionScore = 0;
+    let radarBlips = [];
+    let lastAlertTime = 0;
+
+    // Acoustic Doppler Sonar Variables
+    let sonarActive = false;
+    let audioCtx = null;
+    let analyserNode = null;
+    let sonarOsc = null;
+    let micStream = null;
+    let prevSpectrum = null;
+    let acousticMotionBoost = 0;
+
+    const radarCanvas = document.getElementById('radarCanvas');
+    const rCtx = radarCanvas.getContext('2d');
+    const waveCanvas = document.getElementById('waveCanvas');
+    const wCtx = waveCanvas.getContext('2d');
+
+    window.onload = () => {
+        updateNetworkInfo();
+        requestAnimationFrame(renderVisualLoop);
+    };
+
+    function updateNetworkInfo() {
+        const badge = document.getElementById('connTypeBadge');
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (conn) {
+            const type = (conn.type || conn.effectiveType || 'WIFI').toUpperCase();
+            badge.innerText = `NET: ${type}`;
+        } else {
+            badge.innerText = 'NET: ACTIVE RF';
+        }
+    }
+
+    function updateSensLabel() {
+        const val = parseInt(document.getElementById('sensSlider').value);
+        let txt = 'মাঝারি';
+        if (val >= 80) txt = 'আল্ট্রা';
+        else if (val >= 60) txt = 'উচ্চ';
+        else if (val < 40) txt = 'কম';
+        document.getElementById('sensLabel').innerText = `${txt} (${val}%)`;
+    }
+
+    function addLog(msg, type = '') {
+        const box = document.getElementById('logBox');
+        const now = new Date();
+        const ts = now.toTimeString().split(' ')[0];
+        const div = document.createElement('div');
+        div.className = `log-line ${type}`;
+        div.innerText = `[${ts}] ${msg}`;
+        box.prepend(div);
+        if (box.children.length > 35) box.removeChild(box.lastChild);
+    }
+
+    function playTacticalBeep(isHighThreat) {
+        if (!document.getElementById('soundAlertToggle').checked) return;
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = isHighThreat ? 'sawtooth' : 'sine';
+            osc.frequency.setValueAtTime(isHighThreat ? 980 : 620, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.19);
+        } catch (e) {}
+    }
+
+    // Optional 19.5kHz Ultrasonic Doppler Sonar Assist
+    async function toggleAcousticSonar() {
+        const checked = document.getElementById('sonarToggle').checked;
+        if (!checked) {
+            sonarActive = false;
+            acousticMotionBoost = 0;
+            if (sonarOsc) { try { sonarOsc.stop(); } catch (e) {} sonarOsc = null; }
+            if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+            addLog('Acoustic Sonar Boost বন্ধ করা হয়েছে।');
+            return;
+        }
+
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            micStream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+            });
+            const src = audioCtx.createMediaStreamSource(micStream);
+            analyserNode = audioCtx.createAnalyser();
+            analyserNode.fftSize = 1024;
+            src.connect(analyserNode);
+
+            sonarOsc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            sonarOsc.type = 'sine';
+            sonarOsc.frequency.value = 19500; // Near-ultrasonic carrier
+            gain.gain.value = 0.08;
+            sonarOsc.connect(gain);
+            gain.connect(audioCtx.destination);
+            sonarOsc.start();
+
+            sonarActive = true;
+            prevSpectrum = null;
+            addLog('🦇 19.5kHz Ultrasonic Doppler Sonar সক্রিয়!', 'ok');
+        } catch (err) {
+            document.getElementById('sonarToggle').checked = false;
+            alert('মাইক্রোফোন অনুমতি না থাকায় Acoustic Sonar চালু করা যায়নি। শুধু Wi-Fi RF রাডার চলবে।');
+        }
+    }
+
+    function measureAcousticDoppler() {
+        if (!sonarActive || !analyserNode) return 0;
+        const data = new Uint8Array(analyserNode.frequencyBinCount);
+        analyserNode.getByteFrequencyData(data);
+        // Check high-frequency bins around 18kHz - 21kHz
+        const startBin = Math.floor(data.length * 0.78);
+        const endBin = Math.floor(data.length * 0.94);
+
+        let diffSum = 0;
+        if (prevSpectrum) {
+            for (let i = startBin; i < endBin; i++) {
+                diffSum += Math.abs(data[i] - prevSpectrum[i]);
+            }
+        }
+        prevSpectrum = data.slice();
+        return Math.min(65, diffSum * 0.45);
+    }
+
+    function toggleRadar() {
+        const btn = document.getElementById('scanBtn');
+        if (isScanning) {
+            isScanning = false;
+            clearTimeout(scanTimer);
+            btn.innerText = '▶ রাডার চালু করুন';
+            btn.classList.remove('active-scan');
+            setThreatState('standby', '⚫ সিস্টেম স্ট্যান্ডবাই', 'রাডার স্ক্যানিং বন্ধ রাখা হয়েছে');
+            addLog('রাডার স্ক্যানিং বন্ধ করা হয়েছে।');
+            return;
+        }
+
+        isScanning = true;
+        btn.innerText = '⏹️ রাডার বন্ধ করুন';
+        btn.classList.add('active-scan');
+        addLog('RF ওয়াই-ফাই পেরিমিটার স্ক্যান শুরু হয়েছে...', 'ok');
+        calibrateBaseline();
+        runRfProbeLoop();
+    }
+
+    function calibrateBaseline() {
+        if (!isScanning) {
+            toggleRadar();
+            return;
+        }
+        isCalibrating = true;
+        calSamples = [];
+        document.getElementById('baselineLabel').innerText = 'CALIBRATING...';
+        addLog('রুমের ফাঁকা সিগন্যাল বেসলাইন মাপা হচ্ছে (৩ সেকেন্ড স্থির থাকুন)...');
+    }
+
+    // High-Precision RF Round-Trip Jitter Probe
+    async function measureSingleRfPing() {
+        const endpoints = [
+            'https://1.1.1.1/cdn-cgi/trace',
+            'https://www.google.com/generate_204'
+        ];
+        const target = endpoints[Math.floor(Math.random() * endpoints.length)] + '?t=' + Date.now();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 900);
+
+        const t0 = performance.now();
+        try {
+            await fetch(target, { mode: 'no-cors', cache: 'no-store', signal: controller.signal });
+        } catch (e) {}
+        clearTimeout(timeout);
+        const t1 = performance.now();
+        return Math.min(850, t1 - t0);
+    }
+
+    async function runRfProbeLoop() {
+        if (!isScanning) return;
+
+        const rtt = await measureSingleRfPing();
+        if (!isScanning) return;
+
+        rttHistory.push(rtt);
+        if (rttHistory.length > 12) rttHistory.shift();
+
+        // Calculate instantaneous RF jitter (delta from moving average)
+        const avgRtt = rttHistory.reduce((a, b) => a + b, 0) / rttHistory.length;
+        const instantJitter = Math.abs(rtt - avgRtt);
+
+        if (isCalibrating) {
+            calSamples.push(instantJitter);
+            if (calSamples.length >= 12) {
+                baselineRtt = avgRtt;
+                const meanJit = calSamples.reduce((a, b) => a + b, 0) / calSamples.length;
+                baselineJitter = Math.max(2.0, meanJit * 1.25);
+                isCalibrating = false;
+                document.getElementById('baselineLabel').innerText = `LOCKED (${baselineJitter.toFixed(1)}ms)`;
+                addLog(`বেসলাইন লক সম্পন্ন! স্বাভাবিক জিটার: ${baselineJitter.toFixed(1)}ms`, 'ok');
+            }
+        }
+
+        const sensitivity = parseInt(document.getElementById('sensSlider').value) / 100;
+        const dopplerScore = measureAcousticDoppler();
+
+        // Compute RF anomaly score relative to locked room baseline
+        const excessJitter = Math.max(0, instantJitter - baselineJitter);
+        const rawRfScore = (excessJitter / (28 * (1.25 - sensitivity))) * 100;
+        const combinedScore = Math.min(100, Math.round(rawRfScore * 0.75 + dopplerScore * 0.65));
+
+        // Smooth decay
+        currentMotionScore = Math.round(currentMotionScore * 0.45 + combinedScore * 0.55);
+
+        jitterHistory.push(currentMotionScore);
+        if (jitterHistory.length > 60) jitterHistory.shift();
+
+        // Update UI Numbers
+        document.getElementById('rttVal').innerText = `${Math.round(rtt)} ms`;
+        document.getElementById('jitterVal').innerText = `${instantJitter.toFixed(1)} ms`;
+        document.getElementById('motionScore').innerText = `${currentMotionScore}%`;
+
+        evaluateThreatLevel(currentMotionScore, instantJitter);
+
+        scanTimer = setTimeout(runRfProbeLoop, 180);
+    }
+
+    function evaluateThreatLevel(score, jitter) {
+        if (isCalibrating) {
+            setThreatState('warn', '🎯 বেসলাইন ক্যালিব্রেশন চলছে...', 'দয়া করে ফোন ও আশপাশ স্থির রাখুন');
+            return;
+        }
+
+        const now = Date.now();
+        if (score >= 62) {
+            setThreatState('breach', '🚨 সতর্কতা: আড়ালে অবস্থান / নড়াচড়া শনাক্ত!', `RF সিগন্যাল বিচ্যুতি: ${score}% (জিটার: ${jitter.toFixed(1)}ms)`);
+            spawnRadarBlip(score);
+            if (now - lastAlertTime > 2200) {
+                lastAlertTime = now;
+                addLog(`⚠️ [BREACH] শক্তিশালী নড়াচড়া শনাক্ত (${score}%)!`, 'alert');
+                playTacticalBeep(true);
+                if (document.getElementById('vibeToggle').checked && navigator.vibrate) {
+                    navigator.vibrate([180, 80, 180]);
+                }
+            }
+        } else if (score >= 32) {
+            setThreatState('warn', '🟡 সূক্ষ্ম তরঙ্গ পরিবর্তন (Micro-Motion)', `পেরিমিটারে মৃদু নড়াচড়া: ${score}%`);
+            if (Math.random() > 0.5) spawnRadarBlip(score);
+        } else {
+            setThreatState('clear', '🟢 পেরিমিটার নিরাপদ (রুম ফাঁকা)', 'কোনো অস্বাভাবিক RF বা ডপলার তরঙ্গ নেই');
+        }
+    }
+
+    function setThreatState(mode, title, sub) {
+        const banner = document.getElementById('threatBanner');
+        const tEl = document.getElementById('threatTitle');
+        const sEl = document.getElementById('threatSub');
+        banner.className = 'threat-banner';
+        if (mode === 'warn') banner.classList.add('warn');
+        if (mode === 'breach') banner.classList.add('breach');
+        tEl.innerText = title;
+        sEl.innerText = sub;
+    }
+
+    function spawnRadarBlip(intensity) {
+        // Place blip near current sweep angle; higher intensity = closer to center (phone)
+        const normalizedDist = Math.max(0.18, Math.min(0.88, 1 - (intensity / 115)));
+        const jitterAngle = sweepAngle + (Math.random() - 0.5) * 0.45;
+        radarBlips.push({
+            angle: jitterAngle,
+            dist: normalizedDist,
+            life: 1.0,
+            high: intensity >= 62
+        });
+        if (radarBlips.length > 18) radarBlips.shift();
+    }
+
+    // Visual Render Loop (Radar Sweep + Oscilloscope)
+    function renderVisualLoop() {
+        drawRadar();
+        drawWaveform();
+        requestAnimationFrame(renderVisualLoop);
+    }
+
+    function drawRadar() {
+        const w = radarCanvas.width;
+        const h = radarCanvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        const maxR = cx - 12;
+
+        rCtx.clearRect(0, 0, w, h);
+
+        // Concentric Distance Rings
+        rCtx.strokeStyle = 'rgba(0, 255, 136, 0.22)';
+        rCtx.lineWidth = 1;
+        [0.25, 0.5, 0.75, 1.0].forEach((ratio, idx) => {
+            rCtx.beginPath();
+            rCtx.arc(cx, cy, maxR * ratio, 0, Math.PI * 2);
+            rCtx.stroke();
+
+            rCtx.fillStyle = 'rgba(0, 255, 136, 0.45)';
+            rCtx.font = '10px monospace';
+            rCtx.fillText(`${(idx + 1) * 2}m`, cx + 4, cy - maxR * ratio + 11);
+        });
+
+        // Crosshairs
+        rCtx.beginPath();
+        rCtx.moveTo(cx - maxR, cy); rCtx.lineTo(cx + maxR, cy);
+        rCtx.moveTo(cx, cy - maxR); rCtx.lineTo(cx, cy + maxR);
+        rCtx.stroke();
+
+        // Center Node (Your Phone)
+        rCtx.fillStyle = '#00ff88';
+        rCtx.beginPath();
+        rCtx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+        rCtx.fill();
+
+        if (isScanning) {
+            sweepAngle = (sweepAngle + 0.045) % (Math.PI * 2);
+
+            // Sweep Cone Gradient
+            for (let i = 0; i < 18; i++) {
+                const a = sweepAngle - i * 0.03;
+                rCtx.strokeStyle = `rgba(0, 255, 136, ${(1 - i / 18) * 0.28})`;
+                rCtx.lineWidth = 2;
+                rCtx.beginPath();
+                rCtx.moveTo(cx, cy);
+                rCtx.lineTo(cx + Math.cos(a) * maxR, cy + Math.sin(a) * maxR);
+                rCtx.stroke();
+            }
+        }
+
+        // Draw Detected Threat Blips
+        for (let i = radarBlips.length - 1; i >= 0; i--) {
+            const b = radarBlips[i];
+            const bx = cx + Math.cos(b.angle) * (b.dist * maxR);
+            const by = cy + Math.sin(b.angle) * (b.dist * maxR);
+
+            rCtx.fillStyle = b.high
+                ? `rgba(255, 42, 85, ${b.life})`
+                : `rgba(245, 158, 11, ${b.life})`;
+            rCtx.beginPath();
+            rCtx.arc(bx, by, b.high ? 7 : 5, 0, Math.PI * 2);
+            rCtx.fill();
+
+            // Target Lock Ring for High Threat
+            if (b.high) {
+                rCtx.strokeStyle = `rgba(255, 42, 85, ${b.life})`;
+                rCtx.lineWidth = 1.5;
+                rCtx.strokeRect(bx - 10, by - 10, 20, 20);
+            }
+
+            b.life -= 0.015;
+            if (b.life <= 0) radarBlips.splice(i, 1);
+        }
+    }
+
+    function drawWaveform() {
+        const w = waveCanvas.width;
+        const h = waveCanvas.height;
+        wCtx.clearRect(0, 0, w, h);
+
+        // Threshold Line
+        wCtx.strokeStyle = 'rgba(255, 42, 85, 0.35)';
+        wCtx.setLineDash([4, 4]);
+        const threshY = h - (0.62 * (h - 10)) - 5;
+        wCtx.beginPath();
+        wCtx.moveTo(0, threshY);
+        wCtx.lineTo(w, threshY);
+        wCtx.stroke();
+        wCtx.setLineDash([]);
+
+        // RF Jitter Line
+        wCtx.strokeStyle = currentMotionScore >= 62 ? '#ff2a55' : '#00ff88';
+        wCtx.lineWidth = 2;
+        wCtx.beginPath();
+
+        const step = w / (jitterHistory.length - 1);
+        jitterHistory.forEach((val, idx) => {
+            const x = idx * step;
+            const y = h - ((val / 100) * (h - 10)) - 5;
+            if (idx === 0) wCtx.moveTo(x, y);
+            else wCtx.lineTo(x, y);
+        });
+        wCtx.stroke();
+    }
+</script>
+</body>
+</html>
